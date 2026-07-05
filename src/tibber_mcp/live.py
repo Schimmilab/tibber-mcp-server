@@ -28,9 +28,13 @@ def summarize(samples: list[dict]) -> dict:
 
 
 async def live_snapshot(
-    token: str, home_id: str | None = None, sample_seconds: float = 5.0
+    token: str, home_id: str | None = None, sample_seconds: float = 15.0
 ) -> dict:
-    """Abonniert den Pulse-Live-Stream für sample_seconds und liefert einen Snapshot."""
+    """Abonniert den Pulse-Live-Stream und liefert einen Snapshot.
+
+    Wartet bis zu sample_seconds, endet aber früher, sobald genug
+    Messwerte vorliegen (mind. 2 Samples).
+    """
     async with aiohttp.ClientSession() as session:
         conn = tibber.Tibber(token, websession=session, user_agent="tibber-mcp-server")
         try:
@@ -42,7 +46,10 @@ async def live_snapshot(
             if home_id is not None:
                 matches = [h for h in homes if h.home_id == home_id]
                 if not matches:
-                    raise TibberApiError(f"Unbekannte home_id '{home_id}'.")
+                    available = ", ".join(h.home_id for h in homes)
+                    raise TibberApiError(
+                        f"Unbekannte home_id '{home_id}'. Verfügbar: {available}"
+                    )
                 home = matches[0]
             await home.update_info()
             if not home.has_real_time_consumption:
@@ -57,9 +64,14 @@ async def live_snapshot(
                 if data:
                     samples.append(data)
 
-            await home.rt_subscribe(on_data)
-            await asyncio.sleep(sample_seconds)
-            await conn.rt_disconnect()
+            try:
+                await home.rt_subscribe(on_data)
+                waited = 0.0
+                while waited < sample_seconds and len(samples) < 2:
+                    await asyncio.sleep(0.5)
+                    waited += 0.5
+            finally:
+                await conn.rt_disconnect()
         except TibberApiError:
             raise
         except Exception as exc:

@@ -239,7 +239,8 @@ async def get_consumption_report(
 
 async def get_live_measurement(home_id: str | None = None) -> dict:
     """Live-Messung vom Tibber Pulse: aktuelle Leistung (W), Min/Max im
-    5-Sekunden-Messfenster, Tagesverbrauch (kWh) und Tageskosten (EUR).
+    Messfenster, Tagesverbrauch (kWh) und Tageskosten (EUR). Wartet bis zu
+    15 Sekunden, endet sobald Messwerte vorliegen.
     Benötigt einen Tibber Pulse am Zähler."""
     token = os.environ.get("TIBBER_API_TOKEN")
     if not token:
