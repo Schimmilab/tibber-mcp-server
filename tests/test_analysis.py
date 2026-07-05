@@ -46,3 +46,43 @@ def test_price_context_no_entry_for_now_raises():
     now = datetime(2026, 7, 5, 5, 0, tzinfo=TZ)
     with pytest.raises(ValueError):
         analysis.price_context(today, now)
+
+
+def test_cheapest_contiguous_window():
+    prices = _prices([0.30, 0.10, 0.12, 0.35, 0.09, 0.40])
+    result = analysis.find_cheapest_window(prices, duration_hours=2, contiguous=True)
+    assert result["hours"] == [
+        "2026-07-05T01:00:00.000+02:00",
+        "2026-07-05T02:00:00.000+02:00",
+    ]
+    assert result["average_price_eur_kwh"] == pytest.approx(0.11)
+    assert result["savings_vs_window_average_pct"] == 51.5
+
+
+def test_cheapest_non_contiguous_hours():
+    prices = _prices([0.30, 0.10, 0.12, 0.35, 0.09, 0.40])
+    result = analysis.find_cheapest_window(prices, duration_hours=2, contiguous=False)
+    assert result["hours"] == [
+        "2026-07-05T01:00:00.000+02:00",
+        "2026-07-05T04:00:00.000+02:00",
+    ]
+    assert result["average_price_eur_kwh"] == pytest.approx(0.095)
+
+
+def test_duration_longer_than_window_raises():
+    with pytest.raises(ValueError):
+        analysis.find_cheapest_window(_prices([0.1, 0.2]), duration_hours=3)
+
+
+def test_cheapest_window_negative_average():
+    prices = _prices([-0.10, -0.20, -0.05, -0.25])
+    result = analysis.find_cheapest_window(prices, duration_hours=1, contiguous=True)
+    assert result["hours"] == ["2026-07-05T03:00:00.000+02:00"]
+    # Fenster-Schnitt -0.15, Auswahl -0.25 → 66.7% günstiger
+    assert result["savings_vs_window_average_pct"] == 66.7
+
+
+def test_cheapest_window_zero_average():
+    prices = _prices([-0.10, 0.10])
+    result = analysis.find_cheapest_window(prices, duration_hours=1, contiguous=True)
+    assert result["savings_vs_window_average_pct"] is None

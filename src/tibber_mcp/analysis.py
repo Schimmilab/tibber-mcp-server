@@ -31,3 +31,42 @@ def price_context(today: list[dict], now: datetime) -> dict:
         "hours_today": len(totals),
         "vs_day_average_pct": vs_avg_pct,
     }
+
+
+def find_cheapest_window(
+    prices: list[dict], duration_hours: int, contiguous: bool = True
+) -> dict:
+    """Findet die günstigsten Stunden in einer Preisliste.
+
+    contiguous=True: zusammenhängender Block (Waschmaschine).
+    contiguous=False: die N billigsten Einzelstunden (E-Auto mit Ladepausen).
+    """
+    if duration_hours < 1:
+        raise ValueError("duration_hours muss mindestens 1 sein.")
+    if duration_hours > len(prices):
+        raise ValueError(
+            f"duration_hours={duration_hours} ist länger als das Fenster ({len(prices)} Stunden)."
+        )
+    window_avg = sum(p["total"] for p in prices) / len(prices)
+    if contiguous:
+        best: list[dict] | None = None
+        best_avg = float("inf")
+        for i in range(len(prices) - duration_hours + 1):
+            chunk = prices[i : i + duration_hours]
+            avg = sum(p["total"] for p in chunk) / duration_hours
+            if avg < best_avg:
+                best, best_avg = chunk, avg
+        selected, avg = best, best_avg
+    else:
+        selected = sorted(prices, key=lambda p: p["total"])[:duration_hours]
+        selected.sort(key=lambda p: p["startsAt"])
+        avg = sum(p["total"] for p in selected) / duration_hours
+    if window_avg == 0:
+        savings_pct = None
+    else:
+        savings_pct = round((window_avg - avg) / abs(window_avg) * 100, 1)
+    return {
+        "hours": [p["startsAt"] for p in selected],
+        "average_price_eur_kwh": avg,
+        "savings_vs_window_average_pct": savings_pct,
+    }
