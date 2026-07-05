@@ -140,6 +140,8 @@ async def find_cheapest_hours(
     duration_hours: Laufzeit des Verbrauchers in Stunden.
     window: 'today', 'tomorrow' oder 'next_24h'.
     contiguous: True = zusammenhängender Block, False = billigste Einzelstunden.
+    next_24h schließt die laufende Stunde ein — start_hours[0] kann in der
+    Vergangenheit liegen (sofort starten).
     """
     hid = await resolve_home_id(home_id)
     info = await graphql.get_price_info(hid)
@@ -161,6 +163,8 @@ async def find_cheapest_hours(
         ][:24]
     else:
         raise TibberApiError("window muss 'today', 'tomorrow' oder 'next_24h' sein.")
+    # Annahme: null-totals nur als trailing unpublizierte Stunden, nie mittendrin
+    # (sonst Lücke im Sliding-Window).
     candidates = [e for e in candidates if e.get("total") is not None]
     try:
         result = analysis.find_cheapest_window(candidates, duration_hours, contiguous)

@@ -185,3 +185,27 @@ async def test_find_cheapest_hours_tomorrow_not_published(homes, price_info):
 async def test_find_cheapest_hours_invalid_window(homes, price_info):
     with pytest.raises(TibberApiError, match="window"):
         await server.find_cheapest_hours(duration_hours=2, window="yesterday")
+
+
+async def test_find_cheapest_hours_next_24h_default(homes, price_info):
+    now_hour = datetime.now(server.LOCAL_TZ).hour
+    result = await server.find_cheapest_hours(duration_hours=1)
+    # Monoton steigende Preise → günstigste Zukunfts-Stunde ist die laufende Stunde
+    assert result["window"] == "next_24h"
+    assert result["start_hours"] == [price_info["today"][now_hour]["startsAt"]]
+
+
+async def test_find_cheapest_hours_non_contiguous(homes, price_info):
+    result = await server.find_cheapest_hours(
+        duration_hours=2, window="today", contiguous=False
+    )
+    assert result["start_hours"] == [
+        price_info["today"][0]["startsAt"],
+        price_info["today"][1]["startsAt"],
+    ]
+    assert result["average_price_ct_kwh"] == 20.5
+
+
+async def test_find_cheapest_hours_duration_too_long(homes, price_info):
+    with pytest.raises(TibberApiError, match="länger"):
+        await server.find_cheapest_hours(duration_hours=25, window="today")
