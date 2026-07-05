@@ -180,10 +180,61 @@ async def find_cheapest_hours(
     }
 
 
+async def get_consumption(
+    resolution: str = "DAILY", last: int = 7, home_id: str | None = None
+) -> list[dict]:
+    """Historischer Verbrauch pro Periode: kWh, Kosten (EUR), Durchschnittspreis.
+
+    resolution: HOURLY, DAILY, WEEKLY oder MONTHLY.
+    last: Anzahl der letzten Perioden.
+    """
+    if resolution not in {"HOURLY", "DAILY", "WEEKLY", "MONTHLY"}:
+        raise TibberApiError("resolution muss HOURLY, DAILY, WEEKLY oder MONTHLY sein.")
+    hid = await resolve_home_id(home_id)
+    nodes = await graphql.get_consumption(hid, resolution, last)
+    return [
+        {
+            "from": n["from"],
+            "to": n["to"],
+            "kwh": round(n["consumption"], 2) if n["consumption"] is not None else None,
+            "cost_eur": round(n["cost"], 2) if n["cost"] is not None else None,
+            "avg_price_ct_kwh": (
+                round(n["unitPrice"] * 100, 2) if n["unitPrice"] is not None else None
+            ),
+        }
+        for n in nodes
+    ]
+
+
+async def get_consumption_report(
+    period: str = "month", offset: int = 0, home_id: str | None = None
+) -> dict:
+    """Aggregierter Verbrauchs-/Kostenreport mit Vergleich zur Vorperiode.
+
+    period: 'week', 'month' oder 'year'.
+    offset: 0 = laufende Periode, 1 = vorherige, usw.
+    """
+    if offset < 0:
+        raise TibberApiError("offset muss 0 oder größer sein (0 = laufende Periode).")
+    hid = await resolve_home_id(home_id)
+    today = datetime.now(LOCAL_TZ).date()
+    if period == "week":
+        nodes = await graphql.get_consumption(hid, "DAILY", 7 * (offset + 2))
+    elif period == "month":
+        nodes = await graphql.get_consumption(hid, "DAILY", 31 * (offset + 2) + 3)
+    elif period == "year":
+        nodes = await graphql.get_consumption(hid, "MONTHLY", 12 * (offset + 2))
+    else:
+        raise TibberApiError("period muss 'week', 'month' oder 'year' sein.")
+    return analysis.build_report(nodes, period, offset, today)
+
+
 mcp.tool(get_home_info)
 mcp.tool(get_current_price)
 mcp.tool(get_price_forecast)
 mcp.tool(find_cheapest_hours)
+mcp.tool(get_consumption)
+mcp.tool(get_consumption_report)
 
 
 def main() -> None:

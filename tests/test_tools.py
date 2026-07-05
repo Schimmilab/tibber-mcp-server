@@ -209,3 +209,94 @@ async def test_find_cheapest_hours_non_contiguous(homes, price_info):
 async def test_find_cheapest_hours_duration_too_long(homes, price_info):
     with pytest.raises(TibberApiError, match="länger"):
         await server.find_cheapest_hours(duration_hours=25, window="today")
+
+
+CONSUMPTION_NODES = [
+    {
+        "from": "2026-07-04T00:00:00.000+02:00",
+        "to": "2026-07-05T00:00:00.000+02:00",
+        "consumption": 9.512,
+        "cost": 2.7183,
+        "unitPrice": 0.2858,
+    },
+    {
+        "from": "2026-07-05T00:00:00.000+02:00",
+        "to": "2026-07-06T00:00:00.000+02:00",
+        "consumption": None,
+        "cost": None,
+        "unitPrice": None,
+    },
+]
+
+
+@pytest.fixture
+def consumption(monkeypatch):
+    captured = {}
+
+    async def fake_get_consumption(home_id, resolution, last):
+        captured["args"] = (home_id, resolution, last)
+        return CONSUMPTION_NODES
+
+    monkeypatch.setattr(server.graphql, "get_consumption", fake_get_consumption)
+    return captured
+
+
+async def test_get_consumption_formats_output(homes, consumption):
+    result = await server.get_consumption(resolution="DAILY", last=2)
+    assert result[0] == {
+        "from": "2026-07-04T00:00:00.000+02:00",
+        "to": "2026-07-05T00:00:00.000+02:00",
+        "kwh": 9.51,
+        "cost_eur": 2.72,
+        "avg_price_ct_kwh": 28.58,
+    }
+    assert result[1]["kwh"] is None
+
+
+async def test_get_consumption_rejects_bad_resolution(homes, consumption):
+    with pytest.raises(TibberApiError, match="resolution"):
+        await server.get_consumption(resolution="MINUTELY", last=2)
+
+
+async def test_get_consumption_report_month(homes, monkeypatch):
+    from datetime import date, timedelta as td
+
+    today = datetime.now(server.LOCAL_TZ).date()
+    cur_month_start = today.replace(day=1)
+    prev_month_start = (cur_month_start - td(days=1)).replace(day=1)
+    nodes = [
+        {
+            "from": f"{prev_month_start.isoformat()}T00:00:00.000+02:00",
+            "to": "x",
+            "consumption": 10.0,
+            "cost": 3.0,
+            "unitPrice": 0.3,
+        },
+        {
+            "from": f"{cur_month_start.isoformat()}T00:00:00.000+02:00",
+            "to": "x",
+            "consumption": 8.0,
+            "cost": 2.0,
+            "unitPrice": 0.25,
+        },
+    ]
+
+    async def fake_get_consumption(home_id, resolution, last):
+        assert resolution == "DAILY"
+        return nodes
+
+    monkeypatch.setattr(server.graphql, "get_consumption", fake_get_consumption)
+    report = await server.get_consumption_report(period="month", offset=0)
+    assert report["current"]["kwh"] == 8.0
+    assert report["previous"]["kwh"] == 10.0
+    assert report["change_vs_previous"]["kwh_pct"] == -20.0
+
+
+async def test_get_consumption_report_rejects_bad_period(homes):
+    with pytest.raises(TibberApiError, match="period"):
+        await server.get_consumption_report(period="quarter")
+
+
+async def test_get_consumption_report_rejects_negative_offset(homes):
+    with pytest.raises(TibberApiError, match="offset"):
+        await server.get_consumption_report(period="month", offset=-1)
