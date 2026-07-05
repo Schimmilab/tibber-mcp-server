@@ -2,6 +2,8 @@
 name = "tibber-mcp-server"
 version = "0.1.0"
 description = "MCP-Server für die Tibber-API: Preise, Verbrauch, Pulse-Live-Daten"
+license = { text = "MIT" }
+authors = [{ name = "Jürgen Schilling" }]
 requires-python = ">=3.11"
 dependencies = [
     "fastmcp>=3",
@@ -9,6 +11,9 @@ dependencies = [
     "pyTibber>=0.30",
     "aiohttp>=3.9",
 ]
+
+[project.urls]
+Repository = "https://github.com/Schimmilab/tibber-mcp-server"
 
 [project.scripts]
 tibber-mcp = "tibber_mcp.server:main"

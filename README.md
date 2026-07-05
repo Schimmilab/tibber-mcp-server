@@ -5,12 +5,13 @@ Günstigste-Stunden-Suche und Pulse-Live-Daten — aufbereitet für LLMs.
 
 ## Setup
 
-1. Tibber-Token erstellen: https://developer.tibber.com/settings/access-token
-2. Abhängigkeiten installieren: `uv sync`
+1. Repo klonen: `git clone https://github.com/Schimmilab/tibber-mcp-server.git`
+2. Tibber-Token erstellen: https://developer.tibber.com/settings/access-token
+3. Abhängigkeiten installieren: `uv sync`
 
 ## Einbindung in Claude Code / Claude Desktop
 
-`.mcp.json`:
+`.mcp.json` (Pfad an den Clone-Ort anpassen):
 
 ```json
 {
@@ -20,7 +21,7 @@ Günstigste-Stunden-Suche und Pulse-Live-Daten — aufbereitet für LLMs.
       "args": [
         "run",
         "--directory",
-        "/Users/jurgenschilling/workspace/tibber-mcp-server",
+        "/pfad/zu/tibber-mcp-server",
         "tibber-mcp"
       ],
       "env": { "TIBBER_API_TOKEN": "<dein-token>" }
@@ -29,10 +30,16 @@ Günstigste-Stunden-Suche und Pulse-Live-Daten — aufbereitet für LLMs.
 }
 ```
 
-Alternativ liegt der Token in `.env` (nicht eingecheckt); dann:
+Alternativ liegt der Token in einer `.env`-Datei im Repo-Verzeichnis (nicht eingecheckt); dann statt des `env`-Blocks:
 
 ```json
-"args": ["run", "--env-file", "/Users/jurgenschilling/workspace/tibber-mcp-server/.env", "--directory", "/Users/jurgenschilling/workspace/tibber-mcp-server", "tibber-mcp"]
+"args": ["run", "--env-file", "/pfad/zu/tibber-mcp-server/.env", "--directory", "/pfad/zu/tibber-mcp-server", "tibber-mcp"]
+```
+
+Oder per Claude-Code-CLI global installieren:
+
+```bash
+claude mcp add tibber --scope user -- uv run --env-file /pfad/zu/tibber-mcp-server/.env --directory /pfad/zu/tibber-mcp-server tibber-mcp
 ```
 
 ## Tools
@@ -58,3 +65,7 @@ uv run pytest          # Tests
 
 Spec: `docs/superpowers/specs/2026-07-05-tibber-mcp-server-design.md`
 Plan: `docs/superpowers/plans/2026-07-05-tibber-mcp-server.md`
+
+## Lizenz
+
+MIT — siehe [LICENSE](LICENSE). Ein [Schimmilab](https://schimmilab.de)-Projekt.
