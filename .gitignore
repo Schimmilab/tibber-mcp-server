@@ -4,3 +4,8 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .env
+*.iml
+ruvector.db
+*.rvf
+*.rvf.lock
+data/

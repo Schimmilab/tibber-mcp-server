@@ -6,7 +6,7 @@
 
 **Architecture:** Hybrid-Ansatz — eigener GraphQL-Client (httpx) für Preise/Verbrauch/Stammdaten, pyTibber nur für den Pulse-Live-WebSocket. Analyse-Logik (Günstigste-Stunden, Preis-Kontext, Reports) als pure functions in `analysis.py`. In-Memory-TTL-Cache gegen das Tibber-Rate-Limit.
 
-**Tech Stack:** Python ≥3.11, uv, fastmcp (2.x), httpx, pyTibber, pytest + pytest-asyncio + respx.
+**Tech Stack:** Python ≥3.11, uv, fastmcp (3.x), httpx, pyTibber, pytest + pytest-asyncio + respx.
 
 **Spec:** `docs/superpowers/specs/2026-07-05-tibber-mcp-server-design.md`
 
