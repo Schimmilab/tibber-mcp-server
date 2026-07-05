@@ -86,3 +86,21 @@ def test_cheapest_window_zero_average():
     prices = _prices([-0.10, 0.10])
     result = analysis.find_cheapest_window(prices, duration_hours=1, contiguous=True)
     assert result["savings_vs_window_average_pct"] is None
+
+
+def test_non_contiguous_sorts_chronologically_across_dst():
+    # Herbst-Zeitumstellung: 02:00+02:00 (CEST) liegt VOR 02:00+01:00 (CET)
+    prices = [
+        {"startsAt": "2026-10-25T02:00:00.000+01:00", "total": 0.10, "level": "NORMAL"},
+        {"startsAt": "2026-10-25T02:00:00.000+02:00", "total": 0.09, "level": "NORMAL"},
+    ]
+    result = analysis.find_cheapest_window(prices, duration_hours=2, contiguous=False)
+    assert result["hours"] == [
+        "2026-10-25T02:00:00.000+02:00",
+        "2026-10-25T02:00:00.000+01:00",
+    ]
+
+
+def test_duration_below_one_raises():
+    with pytest.raises(ValueError):
+        analysis.find_cheapest_window(_prices([0.1, 0.2]), duration_hours=0)

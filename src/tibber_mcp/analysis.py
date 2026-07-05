@@ -40,6 +40,7 @@ def find_cheapest_window(
 
     contiguous=True: zusammenhängender Block (Waschmaschine).
     contiguous=False: die N billigsten Einzelstunden (E-Auto mit Ladepausen).
+    prices muss chronologisch sortiert und lückenlos sein (Voraussetzung des Sliding-Window).
     """
     if duration_hours < 1:
         raise ValueError("duration_hours muss mindestens 1 sein.")
@@ -59,7 +60,7 @@ def find_cheapest_window(
         selected, avg = best, best_avg
     else:
         selected = sorted(prices, key=lambda p: p["total"])[:duration_hours]
-        selected.sort(key=lambda p: p["startsAt"])
+        selected.sort(key=lambda p: _parse(p["startsAt"]))
         avg = sum(p["total"] for p in selected) / duration_hours
     if window_avg == 0:
         savings_pct = None
@@ -67,6 +68,6 @@ def find_cheapest_window(
         savings_pct = round((window_avg - avg) / abs(window_avg) * 100, 1)
     return {
         "hours": [p["startsAt"] for p in selected],
-        "average_price_eur_kwh": avg,
+        "average_price_eur_kwh": round(avg, 4),
         "savings_vs_window_average_pct": savings_pct,
     }
