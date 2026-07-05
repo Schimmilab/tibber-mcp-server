@@ -21,8 +21,12 @@ def summarize(samples: list[dict]) -> dict:
         "power_min_w": min(powers) if powers else None,
         "power_max_w": max(powers) if powers else None,
         "samples": len(samples),
-        "accumulated_kwh_today": last.get("accumulatedConsumption"),
-        "accumulated_cost_today_eur": last.get("accumulatedCost"),
+        "accumulated_kwh_today": round(last["accumulatedConsumption"], 2)
+        if last.get("accumulatedConsumption") is not None
+        else None,
+        "accumulated_cost_today_eur": round(last["accumulatedCost"], 2)
+        if last.get("accumulatedCost") is not None
+        else None,
         "timestamp": last.get("timestamp"),
     }
 

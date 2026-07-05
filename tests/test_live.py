@@ -35,6 +35,13 @@ def test_summarize_empty_raises():
         live.summarize([])
 
 
+def test_summarize_rounds_accumulated_values():
+    samples = [{"power": 100, "accumulatedConsumption": 4.23456, "accumulatedCost": 1.14999, "timestamp": "t"}]
+    result = live.summarize(samples)
+    assert result["accumulated_kwh_today"] == 4.23
+    assert result["accumulated_cost_today_eur"] == 1.15
+
+
 def test_summarize_tolerates_null_power():
     samples = [
         {"power": None, "accumulatedConsumption": 1.0, "accumulatedCost": 0.3, "timestamp": "t1"},

@@ -1809,7 +1809,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9" },
-    { name = "fastmcp", specifier = ">=2.0" },
+    { name = "fastmcp", specifier = ">=3" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "pytibber", specifier = ">=0.30" },
 ]

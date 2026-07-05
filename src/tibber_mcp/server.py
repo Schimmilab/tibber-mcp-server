@@ -120,6 +120,8 @@ async def get_price_forecast(home_id: str | None = None) -> dict:
     hid = await resolve_home_id(home_id)
     info = await graphql.get_price_info(hid)
     result: dict = {"today": _day_summary(info["today"])}
+    if result["today"] is None:
+        result["today_note"] = "Keine Preisdaten für heute in der Tibber-Antwort."
     tomorrow = _day_summary(info.get("tomorrow") or [])
     result["tomorrow_available"] = tomorrow is not None
     if tomorrow:

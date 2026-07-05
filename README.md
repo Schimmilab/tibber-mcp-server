@@ -29,6 +29,12 @@ Günstigste-Stunden-Suche und Pulse-Live-Daten — aufbereitet für LLMs.
 }
 ```
 
+Alternativ liegt der Token in `.env` (nicht eingecheckt); dann:
+
+```json
+"args": ["run", "--env-file", "/Users/jurgenschilling/workspace/tibber-mcp-server/.env", "--directory", "/Users/jurgenschilling/workspace/tibber-mcp-server", "tibber-mcp"]
+```
+
 ## Tools
 
 | Tool | Zweck |
