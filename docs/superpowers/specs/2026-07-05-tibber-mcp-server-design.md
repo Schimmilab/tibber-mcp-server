@@ -83,7 +83,8 @@ Rohverbrauch: `resolution` (`HOURLY` | `DAILY` | `WEEKLY` | `MONTHLY`),
 `last` (Anzahl Perioden). Pro Periode: kWh, Kosten (EUR), Durchschnittspreis.
 
 ### 6. `get_consumption_report`
-Aggregierter Report über einen Zeitraum:
+Aggregierter Report. Parameter: `period` (`week` | `month` | `year`),
+`offset` (0 = laufende Periode, 1 = vorherige, …).
 - Gesamt-kWh, Gesamtkosten, gezahlter Durchschnittspreis
 - Vergleich zur Vorperiode (absolut und Prozent)
 
