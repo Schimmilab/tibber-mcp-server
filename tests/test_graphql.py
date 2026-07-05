@@ -36,6 +36,36 @@ async def test_rate_limit_429():
 
 
 @respx.mock
+async def test_network_error_raises():
+    respx.post(graphql.API_URL).mock(side_effect=httpx.ConnectError("boom"))
+    with pytest.raises(TibberApiError, match="nicht erreichbar"):
+        await graphql.query("{ viewer { name } }")
+
+
+@respx.mock
+async def test_server_error_500():
+    respx.post(graphql.API_URL).mock(return_value=httpx.Response(500))
+    with pytest.raises(TibberApiError, match="500"):
+        await graphql.query("{ viewer { name } }")
+
+
+@respx.mock
+async def test_non_json_200_body():
+    respx.post(graphql.API_URL).mock(
+        return_value=httpx.Response(200, text="<html>gateway</html>")
+    )
+    with pytest.raises(TibberApiError, match="JSON"):
+        await graphql.query("{ viewer { name } }")
+
+
+@respx.mock
+async def test_missing_data_field():
+    respx.post(graphql.API_URL).mock(return_value=httpx.Response(200, json={}))
+    with pytest.raises(TibberApiError, match="data"):
+        await graphql.query("{ viewer { name } }")
+
+
+@respx.mock
 async def test_graphql_errors_raised():
     respx.post(graphql.API_URL).mock(
         return_value=httpx.Response(

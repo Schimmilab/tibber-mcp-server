@@ -45,8 +45,15 @@ async def query(gql: str, variables: dict | None = None) -> dict:
         )
     if response.status_code != 200:
         raise TibberApiError(f"Tibber-API-Fehler: HTTP {response.status_code}")
-    payload = response.json()
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise TibberApiError(
+            f"Tibber-API lieferte keine gültige JSON-Antwort (HTTP {response.status_code})."
+        ) from exc
     if payload.get("errors"):
         messages = "; ".join(e.get("message", "?") for e in payload["errors"])
         raise TibberApiError(f"Tibber-GraphQL-Fehler: {messages}")
+    if "data" not in payload or payload["data"] is None:
+        raise TibberApiError("Tibber-API-Antwort enthält kein 'data'-Feld.")
     return payload["data"]
