@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -104,3 +104,70 @@ def test_non_contiguous_sorts_chronologically_across_dst():
 def test_duration_below_one_raises():
     with pytest.raises(ValueError):
         analysis.find_cheapest_window(_prices([0.1, 0.2]), duration_hours=0)
+
+
+def test_period_bounds_month_offset():
+    start, end = analysis.period_bounds("month", 1, date(2026, 7, 5))
+    assert start == date(2026, 6, 1)
+    assert end == date(2026, 7, 1)
+
+
+def test_period_bounds_month_over_year_boundary():
+    start, end = analysis.period_bounds("month", 7, date(2026, 7, 5))
+    assert start == date(2025, 12, 1)
+    assert end == date(2026, 1, 1)
+
+
+def test_period_bounds_week():
+    # 2026-07-05 ist ein Sonntag → laufende Woche beginnt Montag 2026-06-29
+    start, end = analysis.period_bounds("week", 0, date(2026, 7, 5))
+    assert start == date(2026, 6, 29)
+    assert end == date(2026, 7, 6)
+
+
+def test_period_bounds_year():
+    start, end = analysis.period_bounds("year", 1, date(2026, 7, 5))
+    assert start == date(2025, 1, 1)
+    assert end == date(2026, 1, 1)
+
+
+def _node(day: str, kwh: float | None, cost: float | None) -> dict:
+    return {
+        "from": f"{day}T00:00:00.000+02:00",
+        "to": f"{day}T23:59:59.000+02:00",
+        "consumption": kwh,
+        "cost": cost,
+        "unitPrice": (cost / kwh) if kwh and cost else None,
+    }
+
+
+def test_build_report_compares_periods():
+    nodes = [
+        _node("2026-06-10", 10.0, 3.0),
+        _node("2026-07-02", 8.0, 2.0),
+        _node("2026-07-04", None, None),  # fehlende Daten werden ignoriert
+    ]
+    report = analysis.build_report(nodes, "month", 0, date(2026, 7, 5))
+    assert report["current"]["kwh"] == 8.0
+    assert report["current"]["cost_eur"] == 2.0
+    assert report["current"]["avg_price_ct_kwh"] == 25.0
+    assert report["previous"]["kwh"] == 10.0
+    assert report["change_vs_previous"]["kwh_pct"] == -20.0
+    assert report["change_vs_previous"]["cost_pct"] == -33.3
+
+
+def test_build_report_without_previous_data():
+    nodes = [_node("2026-07-02", 8.0, 2.0)]
+    report = analysis.build_report(nodes, "month", 0, date(2026, 7, 5))
+    assert report["previous"]["kwh"] == 0
+    assert report["change_vs_previous"] is None
+
+
+def test_build_report_negative_previous_cost():
+    nodes = [
+        _node("2026-06-10", 10.0, -2.0),  # Vormonat: negative Kosten (Einspeisung/negative Preise)
+        _node("2026-07-02", 8.0, 1.0),
+    ]
+    report = analysis.build_report(nodes, "month", 0, date(2026, 7, 5))
+    # (1.0 - (-2.0)) / 2.0 * 100 = 150.0 → Kosten um 150% des Vorperioden-Betrags gestiegen
+    assert report["change_vs_previous"]["cost_pct"] == 150.0

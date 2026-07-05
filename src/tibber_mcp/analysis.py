@@ -71,3 +71,70 @@ def find_cheapest_window(
         "average_price_eur_kwh": round(avg, 4),
         "savings_vs_window_average_pct": savings_pct,
     }
+
+
+def period_bounds(period: str, offset: int, today: date) -> tuple[date, date]:
+    """Start (inklusiv) und Ende (exklusiv) einer Periode. offset 0 = laufend, 1 = vorherige."""
+    if period == "week":
+        monday = today - timedelta(days=today.weekday())
+        start = monday - timedelta(weeks=offset)
+        return start, start + timedelta(days=7)
+    if period == "month":
+        year, month = today.year, today.month - offset
+        while month < 1:
+            month += 12
+            year -= 1
+        start = date(year, month, 1)
+        end = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+        return start, end
+    if period == "year":
+        start = date(today.year - offset, 1, 1)
+        return start, date(start.year + 1, 1, 1)
+    raise ValueError("period muss 'week', 'month' oder 'year' sein.")
+
+
+def aggregate(nodes: list[dict], start: date, end: date) -> dict:
+    """Summiert Verbrauchs-Nodes, deren 'from'-Datum in [start, end) liegt."""
+    selected = [
+        n
+        for n in nodes
+        if n["consumption"] is not None
+        and start <= _parse(n["from"]).date() < end
+    ]
+    kwh = sum(n["consumption"] for n in selected)
+    cost = sum(n["cost"] or 0 for n in selected)
+    return {
+        "kwh": round(kwh, 2),
+        "cost_eur": round(cost, 2),
+        "avg_price_ct_kwh": round(cost / kwh * 100, 2) if kwh else None,
+        "entries": len(selected),
+    }
+
+
+def build_report(nodes: list[dict], period: str, offset: int, today: date) -> dict:
+    """Report für eine Periode inkl. Vergleich zur Vorperiode."""
+    cur_start, cur_end = period_bounds(period, offset, today)
+    prev_start, prev_end = period_bounds(period, offset + 1, today)
+    current = aggregate(nodes, cur_start, cur_end)
+    previous = aggregate(nodes, prev_start, prev_end)
+    change = None
+    if previous["kwh"]:
+        change = {
+            "kwh_pct": round((current["kwh"] / previous["kwh"] - 1) * 100, 1),
+            "cost_pct": (
+                round(
+                    (current["cost_eur"] - previous["cost_eur"])
+                    / abs(previous["cost_eur"])
+                    * 100,
+                    1,
+                )
+                if previous["cost_eur"]
+                else None
+            ),
+        }
+    return {
+        "period": period,
+        "current": {"from": cur_start.isoformat(), "to": cur_end.isoformat(), **current},
+        "previous": {"from": prev_start.isoformat(), "to": prev_end.isoformat(), **previous},
+        "change_vs_previous": change,
+    }
