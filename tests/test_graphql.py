@@ -74,3 +74,126 @@ async def test_graphql_errors_raised():
     )
     with pytest.raises(TibberApiError, match="boom"):
         await graphql.query("{ viewer { name } }")
+
+
+HOMES_RESPONSE = {
+    "data": {
+        "viewer": {
+            "homes": [
+                {
+                    "id": "h1",
+                    "appNickname": "Zuhause",
+                    "address": {
+                        "address1": "Musterweg 1",
+                        "postalCode": "70173",
+                        "city": "Stuttgart",
+                        "country": "DE",
+                    },
+                    "features": {"realTimeConsumptionEnabled": True},
+                    "meteringPointData": {
+                        "consumptionEan": "DE0001",
+                        "gridCompany": "Netze BW",
+                        "estimatedAnnualConsumption": 3500,
+                    },
+                    "currentSubscription": {"status": "running"},
+                }
+            ]
+        }
+    }
+}
+
+
+@respx.mock
+async def test_get_homes_uses_cache():
+    route = respx.post(graphql.API_URL).mock(
+        return_value=httpx.Response(200, json=HOMES_RESPONSE)
+    )
+    homes = await graphql.get_homes()
+    assert homes[0]["id"] == "h1"
+    await graphql.get_homes()  # zweiter Aufruf aus dem Cache
+    assert route.call_count == 1
+
+
+@respx.mock
+async def test_get_price_info():
+    price_response = {
+        "data": {
+            "viewer": {
+                "home": {
+                    "currentSubscription": {
+                        "priceInfo": {
+                            "current": {
+                                "total": 0.28,
+                                "startsAt": "2026-07-05T13:00:00.000+02:00",
+                                "level": "NORMAL",
+                            },
+                            "today": [
+                                {
+                                    "total": 0.28,
+                                    "startsAt": "2026-07-05T13:00:00.000+02:00",
+                                    "level": "NORMAL",
+                                }
+                            ],
+                            "tomorrow": [],
+                        }
+                    }
+                }
+            }
+        }
+    }
+    respx.post(graphql.API_URL).mock(
+        return_value=httpx.Response(200, json=price_response)
+    )
+    info = await graphql.get_price_info("h1")
+    assert info["current"]["total"] == 0.28
+    assert info["tomorrow"] == []
+
+
+@respx.mock
+async def test_get_price_info_without_subscription():
+    respx.post(graphql.API_URL).mock(
+        return_value=httpx.Response(
+            200, json={"data": {"viewer": {"home": {"currentSubscription": None}}}}
+        )
+    )
+    with pytest.raises(TibberApiError, match="Vertrag"):
+        await graphql.get_price_info("h1")
+
+
+@respx.mock
+async def test_get_consumption():
+    consumption_response = {
+        "data": {
+            "viewer": {
+                "home": {
+                    "consumption": {
+                        "nodes": [
+                            {
+                                "from": "2026-07-04T00:00:00.000+02:00",
+                                "to": "2026-07-05T00:00:00.000+02:00",
+                                "consumption": 9.5,
+                                "cost": 2.7,
+                                "unitPrice": 0.284,
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    respx.post(graphql.API_URL).mock(
+        return_value=httpx.Response(200, json=consumption_response)
+    )
+    nodes = await graphql.get_consumption("h1", "DAILY", 1)
+    assert nodes[0]["consumption"] == 9.5
+
+
+@respx.mock
+async def test_get_consumption_empty_history():
+    respx.post(graphql.API_URL).mock(
+        return_value=httpx.Response(
+            200, json={"data": {"viewer": {"home": {"consumption": None}}}}
+        )
+    )
+    nodes = await graphql.get_consumption("h1", "DAILY", 1)
+    assert nodes == []
