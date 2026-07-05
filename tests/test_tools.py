@@ -167,3 +167,21 @@ async def test_get_price_forecast_with_tomorrow(homes, price_info, monkeypatch):
     assert result["tomorrow"]["min_ct_kwh"] == 15.0
     assert result["tomorrow"]["cheapest_hour"] == "2026-07-06T00:00:00.000+02:00"
     assert "note" not in result
+
+
+async def test_find_cheapest_hours_today(homes, price_info):
+    result = await server.find_cheapest_hours(duration_hours=2, window="today")
+    # Preise steigen monoton → günstigster 2h-Block ist 0-2 Uhr
+    assert result["start_hours"][0] == price_info["today"][0]["startsAt"]
+    assert result["average_price_ct_kwh"] == 20.5
+    assert result["savings_vs_window_average_pct"] > 0
+
+
+async def test_find_cheapest_hours_tomorrow_not_published(homes, price_info):
+    with pytest.raises(TibberApiError, match="13:00"):
+        await server.find_cheapest_hours(duration_hours=2, window="tomorrow")
+
+
+async def test_find_cheapest_hours_invalid_window(homes, price_info):
+    with pytest.raises(TibberApiError, match="window"):
+        await server.find_cheapest_hours(duration_hours=2, window="yesterday")

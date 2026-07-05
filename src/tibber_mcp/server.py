@@ -128,9 +128,58 @@ async def get_price_forecast(home_id: str | None = None) -> dict:
     return result
 
 
+async def find_cheapest_hours(
+    duration_hours: int,
+    window: str = "next_24h",
+    contiguous: bool = True,
+    home_id: str | None = None,
+) -> dict:
+    """Findet die günstigsten Stunden für einen Verbraucher (Waschmaschine,
+    Spülmaschine, E-Auto-Ladung).
+
+    duration_hours: Laufzeit des Verbrauchers in Stunden.
+    window: 'today', 'tomorrow' oder 'next_24h'.
+    contiguous: True = zusammenhängender Block, False = billigste Einzelstunden.
+    """
+    hid = await resolve_home_id(home_id)
+    info = await graphql.get_price_info(hid)
+    now = datetime.now(LOCAL_TZ)
+    if window == "today":
+        candidates = info["today"]
+    elif window == "tomorrow":
+        candidates = info.get("tomorrow") or []
+        if not candidates:
+            raise TibberApiError(
+                "Preise für morgen sind noch nicht publiziert (kommen gegen 13:00)."
+            )
+    elif window == "next_24h":
+        all_entries = info["today"] + (info.get("tomorrow") or [])
+        candidates = [
+            e
+            for e in all_entries
+            if datetime.fromisoformat(e["startsAt"]) + timedelta(hours=1) > now
+        ][:24]
+    else:
+        raise TibberApiError("window muss 'today', 'tomorrow' oder 'next_24h' sein.")
+    candidates = [e for e in candidates if e.get("total") is not None]
+    try:
+        result = analysis.find_cheapest_window(candidates, duration_hours, contiguous)
+    except ValueError as exc:
+        raise TibberApiError(str(exc)) from exc
+    return {
+        "window": window,
+        "duration_hours": duration_hours,
+        "contiguous": contiguous,
+        "start_hours": result["hours"],
+        "average_price_ct_kwh": round(result["average_price_eur_kwh"] * 100, 2),
+        "savings_vs_window_average_pct": result["savings_vs_window_average_pct"],
+    }
+
+
 mcp.tool(get_home_info)
 mcp.tool(get_current_price)
 mcp.tool(get_price_forecast)
+mcp.tool(find_cheapest_hours)
 
 
 def main() -> None:
