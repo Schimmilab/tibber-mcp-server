@@ -251,11 +251,22 @@ async def test_get_consumption_formats_output(homes, consumption):
         "avg_price_ct_kwh": 28.58,
     }
     assert result[1]["kwh"] is None
+    assert consumption["args"] == ("h1", "DAILY", 2)
 
 
 async def test_get_consumption_rejects_bad_resolution(homes, consumption):
     with pytest.raises(TibberApiError, match="resolution"):
         await server.get_consumption(resolution="MINUTELY", last=2)
+
+
+async def test_get_consumption_rejects_last_below_one(homes, consumption):
+    with pytest.raises(TibberApiError, match="mindestens 1"):
+        await server.get_consumption(resolution="HOURLY", last=0)
+
+
+async def test_get_consumption_rejects_huge_last(homes, consumption):
+    with pytest.raises(TibberApiError, match="744"):
+        await server.get_consumption(resolution="HOURLY", last=8760)
 
 
 async def test_get_consumption_report_month(homes, monkeypatch):
@@ -283,6 +294,7 @@ async def test_get_consumption_report_month(homes, monkeypatch):
 
     async def fake_get_consumption(home_id, resolution, last):
         assert resolution == "DAILY"
+        assert last == 65  # 31 * (offset + 2) + 3
         return nodes
 
     monkeypatch.setattr(server.graphql, "get_consumption", fake_get_consumption)
@@ -290,6 +302,19 @@ async def test_get_consumption_report_month(homes, monkeypatch):
     assert report["current"]["kwh"] == 8.0
     assert report["previous"]["kwh"] == 10.0
     assert report["change_vs_previous"]["kwh_pct"] == -20.0
+
+
+async def test_get_consumption_report_week_fetch_depth(homes, monkeypatch):
+    captured = {}
+
+    async def fake_get_consumption(home_id, resolution, last):
+        captured["args"] = (resolution, last)
+        return []
+
+    monkeypatch.setattr(server.graphql, "get_consumption", fake_get_consumption)
+    report = await server.get_consumption_report(period="week", offset=0)
+    assert captured["args"] == ("DAILY", 14)
+    assert report["current"]["kwh"] == 0
 
 
 async def test_get_consumption_report_rejects_bad_period(homes):

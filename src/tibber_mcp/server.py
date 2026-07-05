@@ -190,6 +190,13 @@ async def get_consumption(
     """
     if resolution not in {"HOURLY", "DAILY", "WEEKLY", "MONTHLY"}:
         raise TibberApiError("resolution muss HOURLY, DAILY, WEEKLY oder MONTHLY sein.")
+    if last < 1:
+        raise TibberApiError("last muss mindestens 1 sein.")
+    if last > 744:
+        raise TibberApiError(
+            "last darf höchstens 744 sein (ein Monat in Stunden) — für längere "
+            "Zeiträume gröbere resolution wählen."
+        )
     hid = await resolve_home_id(home_id)
     nodes = await graphql.get_consumption(hid, resolution, last)
     return [
