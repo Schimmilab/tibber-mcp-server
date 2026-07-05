@@ -64,7 +64,69 @@ async def get_home_info() -> list[dict]:
     return [_format_home(h) for h in homes]
 
 
+def _day_summary(entries: list[dict]) -> dict | None:
+    if not entries:
+        return None
+    totals = [e["total"] for e in entries]
+    cheapest = min(entries, key=lambda e: e["total"])
+    priciest = max(entries, key=lambda e: e["total"])
+    return {
+        "hours": [
+            {
+                "starts_at": e["startsAt"],
+                "price_ct_kwh": round(e["total"] * 100, 2),
+                "level": e["level"],
+            }
+            for e in entries
+        ],
+        "min_ct_kwh": round(min(totals) * 100, 2),
+        "max_ct_kwh": round(max(totals) * 100, 2),
+        "avg_ct_kwh": round(sum(totals) / len(totals) * 100, 2),
+        "cheapest_hour": cheapest["startsAt"],
+        "most_expensive_hour": priciest["startsAt"],
+    }
+
+
+async def get_current_price(home_id: str | None = None) -> dict:
+    """Aktueller Strompreis mit Einordnung: Tibber-Level, Rang im Tagesverlauf
+    und prozentuale Abweichung vom Tagesdurchschnitt."""
+    hid = await resolve_home_id(home_id)
+    info = await graphql.get_price_info(hid)
+    current = info.get("current")
+    if current is None:
+        raise TibberApiError(
+            "Kein aktueller Preis in der Tibber-Antwort — später erneut versuchen."
+        )
+    ctx = analysis.price_context(info["today"], datetime.now(LOCAL_TZ))
+    return {
+        "price_ct_kwh": round(current["total"] * 100, 2),
+        "level": current["level"],
+        "starts_at": current["startsAt"],
+        "rank_today": (
+            f"{ctx['rank_today']}. günstigste von {ctx['hours_today']} Stunden"
+        ),
+        "vs_day_average_pct": ctx["vs_day_average_pct"],
+    }
+
+
+async def get_price_forecast(home_id: str | None = None) -> dict:
+    """Stundenpreise für heute und (falls schon publiziert) morgen, jeweils mit
+    Min/Max/Durchschnitt und günstigster/teuerster Stunde."""
+    hid = await resolve_home_id(home_id)
+    info = await graphql.get_price_info(hid)
+    result: dict = {"today": _day_summary(info["today"])}
+    tomorrow = _day_summary(info.get("tomorrow") or [])
+    result["tomorrow_available"] = tomorrow is not None
+    if tomorrow:
+        result["tomorrow"] = tomorrow
+    else:
+        result["note"] = "Preise für morgen werden von Tibber gegen 13:00 publiziert."
+    return result
+
+
 mcp.tool(get_home_info)
+mcp.tool(get_current_price)
+mcp.tool(get_price_forecast)
 
 
 def main() -> None:

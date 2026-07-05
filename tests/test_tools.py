@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import pytest
 
 from tibber_mcp import server
@@ -74,3 +76,62 @@ async def test_tool_error_reaches_mcp_client(monkeypatch):
     from fastmcp.exceptions import ToolError
     with pytest.raises(ToolError, match="Kein Home"):
         await server.mcp.call_tool("get_home_info", {})
+
+
+def _today_prices() -> list[dict]:
+    """24 Stundenpreise für heute: 20 ct um 0 Uhr, +1 ct pro Stunde."""
+    start = datetime.now(server.LOCAL_TZ).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return [
+        {
+            "startsAt": (start + timedelta(hours=h)).isoformat(),
+            "total": round(0.20 + h * 0.01, 4),
+            "level": "NORMAL",
+        }
+        for h in range(24)
+    ]
+
+
+@pytest.fixture
+def price_info(monkeypatch):
+    today = _today_prices()
+    info = {"current": None, "today": today, "tomorrow": []}
+    # current = Eintrag der aktuellen Stunde
+    now_hour = datetime.now(server.LOCAL_TZ).hour
+    info["current"] = today[now_hour]
+
+    async def fake_get_price_info(home_id):
+        return info
+
+    monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
+    return info
+
+
+async def test_get_current_price(homes, price_info):
+    result = await server.get_current_price()
+    expected_ct = round(price_info["current"]["total"] * 100, 2)
+    assert result["price_ct_kwh"] == expected_ct
+    assert result["level"] == "NORMAL"
+    assert "günstigste" in result["rank_today"]
+
+
+async def test_get_price_forecast_tomorrow_missing(homes, price_info):
+    result = await server.get_price_forecast()
+    assert result["tomorrow_available"] is False
+    assert "13:00" in result["note"]
+    assert len(result["today"]["hours"]) == 24
+    assert result["today"]["min_ct_kwh"] == 20.0
+    assert result["today"]["max_ct_kwh"] == 43.0
+
+
+async def test_get_current_price_without_current_entry(homes, price_info, monkeypatch):
+    info = dict(price_info)
+    info["current"] = None
+
+    async def fake_get_price_info(home_id):
+        return info
+
+    monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
+    with pytest.raises(TibberApiError, match="aktueller Preis"):
+        await server.get_current_price()
