@@ -1,10 +1,11 @@
 """Tibber MCP Server — Tool-Schicht. Kein Business-Code, nur Orchestrierung + Formatierung."""
+import os
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastmcp import FastMCP
 
-from tibber_mcp import analysis, graphql
+from tibber_mcp import analysis, graphql, live
 from tibber_mcp.graphql import TibberApiError
 
 LOCAL_TZ = ZoneInfo("Europe/Berlin")
@@ -236,12 +237,26 @@ async def get_consumption_report(
     return analysis.build_report(nodes, period, offset, today)
 
 
+async def get_live_measurement(home_id: str | None = None) -> dict:
+    """Live-Messung vom Tibber Pulse: aktuelle Leistung (W), Min/Max im
+    5-Sekunden-Messfenster, Tagesverbrauch (kWh) und Tageskosten (EUR).
+    Benötigt einen Tibber Pulse am Zähler."""
+    token = os.environ.get("TIBBER_API_TOKEN")
+    if not token:
+        raise TibberApiError(
+            "TIBBER_API_TOKEN ist nicht gesetzt. Token unter "
+            "https://developer.tibber.com/settings/access-token erstellen."
+        )
+    return await live.live_snapshot(token, home_id)
+
+
 mcp.tool(get_home_info)
 mcp.tool(get_current_price)
 mcp.tool(get_price_forecast)
 mcp.tool(find_cheapest_hours)
 mcp.tool(get_consumption)
 mcp.tool(get_consumption_report)
+mcp.tool(get_live_measurement)
 
 
 def main() -> None:
