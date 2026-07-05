@@ -21,8 +21,13 @@ def price_context(today: list[dict], now: datetime) -> dict:
         raise ValueError("Kein Preiseintrag für die aktuelle Stunde gefunden.")
     totals = sorted(p["total"] for p in today)
     avg = sum(totals) / len(totals)
+    if avg == 0:
+        vs_avg_pct = None
+    else:
+        vs_avg_pct = round((current["total"] - avg) / abs(avg) * 100, 1)
     return {
+        # Preis-Gleichstände bekommen denselben (niedrigsten) Rang.
         "rank_today": totals.index(current["total"]) + 1,
         "hours_today": len(totals),
-        "vs_day_average_pct": round((current["total"] / avg - 1) * 100, 1),
+        "vs_day_average_pct": vs_avg_pct,
     }

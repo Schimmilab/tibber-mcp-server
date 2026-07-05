@@ -25,6 +25,22 @@ def test_price_context_rank_and_deviation():
     assert ctx["vs_day_average_pct"] == 20.0
 
 
+def test_price_context_negative_day_average():
+    # Tagesschnitt -0.05; aktuelle Stunde -0.10 ist die günstigste
+    today = _prices([-0.10, -0.05, 0.0, -0.05])
+    now = datetime(2026, 7, 5, 0, 30, tzinfo=TZ)
+    ctx = analysis.price_context(today, now)
+    assert ctx["rank_today"] == 1
+    assert ctx["vs_day_average_pct"] == -100.0  # billiger als der Schnitt → negativ
+
+
+def test_price_context_zero_day_average():
+    today = _prices([-0.10, 0.10])
+    now = datetime(2026, 7, 5, 0, 30, tzinfo=TZ)
+    ctx = analysis.price_context(today, now)
+    assert ctx["vs_day_average_pct"] is None
+
+
 def test_price_context_no_entry_for_now_raises():
     today = _prices([0.20, 0.10])  # nur 0:00 und 1:00 Uhr
     now = datetime(2026, 7, 5, 5, 0, tzinfo=TZ)
