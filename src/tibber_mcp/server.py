@@ -65,6 +65,7 @@ async def get_home_info() -> list[dict]:
 
 
 def _day_summary(entries: list[dict]) -> dict | None:
+    entries = [e for e in entries if e.get("total") is not None]
     if not entries:
         return None
     totals = [e["total"] for e in entries]
@@ -97,7 +98,10 @@ async def get_current_price(home_id: str | None = None) -> dict:
         raise TibberApiError(
             "Kein aktueller Preis in der Tibber-Antwort — später erneut versuchen."
         )
-    ctx = analysis.price_context(info["today"], datetime.now(LOCAL_TZ))
+    try:
+        ctx = analysis.price_context(info["today"], datetime.now(LOCAL_TZ))
+    except ValueError as exc:
+        raise TibberApiError(str(exc)) from exc
     return {
         "price_ct_kwh": round(current["total"] * 100, 2),
         "level": current["level"],

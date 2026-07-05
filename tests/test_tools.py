@@ -135,3 +135,35 @@ async def test_get_current_price_without_current_entry(homes, price_info, monkey
     monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
     with pytest.raises(TibberApiError, match="aktueller Preis"):
         await server.get_current_price()
+
+
+async def test_get_price_forecast_ignores_null_totals(homes, price_info, monkeypatch):
+    info = dict(price_info)
+    info["today"] = list(info["today"]) + [
+        {"startsAt": "2099-01-01T00:00:00.000+01:00", "total": None, "level": None}
+    ]
+
+    async def fake_get_price_info(home_id):
+        return info
+
+    monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
+    result = await server.get_price_forecast()
+    assert len(result["today"]["hours"]) == 24  # None-Eintrag gefiltert
+
+
+async def test_get_price_forecast_with_tomorrow(homes, price_info, monkeypatch):
+    info = dict(price_info)
+    info["tomorrow"] = [
+        {"startsAt": "2026-07-06T00:00:00.000+02:00", "total": 0.15, "level": "CHEAP"},
+        {"startsAt": "2026-07-06T01:00:00.000+02:00", "total": 0.25, "level": "NORMAL"},
+    ]
+
+    async def fake_get_price_info(home_id):
+        return info
+
+    monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
+    result = await server.get_price_forecast()
+    assert result["tomorrow_available"] is True
+    assert result["tomorrow"]["min_ct_kwh"] == 15.0
+    assert result["tomorrow"]["cheapest_hour"] == "2026-07-06T00:00:00.000+02:00"
+    assert "note" not in result

@@ -11,6 +11,7 @@ def price_context(today: list[dict], now: datetime) -> dict:
 
     today: Preiseinträge {"startsAt", "total", "level"} für den heutigen Tag.
     """
+    today = [p for p in today if p.get("total") is not None]
     current = None
     for entry in today:
         starts = _parse(entry["startsAt"])
