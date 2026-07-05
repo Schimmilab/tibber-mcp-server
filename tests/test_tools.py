@@ -53,3 +53,24 @@ async def test_resolve_home_id_defaults_to_first(homes):
 async def test_resolve_home_id_rejects_unknown(homes):
     with pytest.raises(TibberApiError, match="h1"):
         await server.resolve_home_id("does-not-exist")
+
+
+async def test_get_home_info_tolerates_null_fields(monkeypatch):
+    async def fake_get_homes():
+        return [{"id": "h2", "appNickname": None, "address": None,
+                 "features": None, "meteringPointData": None,
+                 "currentSubscription": None}]
+    monkeypatch.setattr(server.graphql, "get_homes", fake_get_homes)
+    result = await server.get_home_info()
+    assert result[0]["home_id"] == "h2"
+    assert result[0]["has_pulse"] is False
+    assert result[0]["meter_ean"] is None
+
+
+async def test_tool_error_reaches_mcp_client(monkeypatch):
+    async def fake_get_homes():
+        return []
+    monkeypatch.setattr(server.graphql, "get_homes", fake_get_homes)
+    from fastmcp.exceptions import ToolError
+    with pytest.raises(ToolError, match="Kein Home"):
+        await server.mcp.call_tool("get_home_info", {})

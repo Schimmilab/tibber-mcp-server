@@ -29,31 +29,39 @@ async def resolve_home_id(home_id: str | None) -> str:
     if any(h["id"] == home_id for h in homes):
         return home_id
     available = ", ".join(
-        f"{h['id']} ({h.get('appNickname') or h['address']['address1']})" for h in homes
+        f"{h['id']} "
+        f"({h.get('appNickname') or (h.get('address') or {}).get('address1') or h['id']})"
+        for h in homes
     )
     raise TibberApiError(f"Unbekannte home_id '{home_id}'. Verfügbar: {available}")
+
+
+def _format_home(h: dict) -> dict:
+    addr = h.get("address") or {}
+    feat = h.get("features") or {}
+    mpd = h.get("meteringPointData") or {}
+    return {
+        "home_id": h["id"],
+        "name": h.get("appNickname"),
+        "address": (
+            f"{addr.get('address1', '?')}, "
+            f"{addr.get('postalCode', '')} {addr.get('city', '')}"
+        ).strip(", "),
+        "has_pulse": feat.get("realTimeConsumptionEnabled", False),
+        "meter_ean": mpd.get("consumptionEan"),
+        "grid_company": mpd.get("gridCompany"),
+        "estimated_annual_kwh": mpd.get("estimatedAnnualConsumption"),
+        "subscription_status": (h.get("currentSubscription") or {}).get("status"),
+    }
 
 
 async def get_home_info() -> list[dict]:
     """Alle Homes im Tibber-Account: Adresse, Tarifstatus, Zählpunkt und ob ein
     Tibber Pulse (Live-Daten) vorhanden ist."""
     homes = await graphql.get_homes()
-    return [
-        {
-            "home_id": h["id"],
-            "name": h.get("appNickname"),
-            "address": (
-                f"{h['address']['address1']}, "
-                f"{h['address']['postalCode']} {h['address']['city']}"
-            ),
-            "has_pulse": h["features"]["realTimeConsumptionEnabled"],
-            "meter_ean": h["meteringPointData"]["consumptionEan"],
-            "grid_company": h["meteringPointData"]["gridCompany"],
-            "estimated_annual_kwh": h["meteringPointData"]["estimatedAnnualConsumption"],
-            "subscription_status": (h.get("currentSubscription") or {}).get("status"),
-        }
-        for h in homes
-    ]
+    if not homes:
+        raise TibberApiError("Kein Home im Tibber-Account gefunden.")
+    return [_format_home(h) for h in homes]
 
 
 mcp.tool(get_home_info)
