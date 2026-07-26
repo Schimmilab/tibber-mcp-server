@@ -69,3 +69,8 @@ Plan: `docs/superpowers/plans/2026-07-05-tibber-mcp-server.md`
 ## Lizenz
 
 MIT — siehe [LICENSE](LICENSE). Ein [Schimmilab](https://schimmilab.de)-Projekt.
+
+## Maintainer
+
+Schimmi — https://schimmilab.de
+Issues und Pull Requests willkommen.
