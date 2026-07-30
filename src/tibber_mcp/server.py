@@ -103,7 +103,7 @@ async def get_current_price(home_id: str | None = None) -> dict:
         ctx = analysis.price_context(info["today"], datetime.now(LOCAL_TZ))
     except ValueError as exc:
         raise TibberApiError(str(exc)) from exc
-    return {
+    result = {
         "price_ct_kwh": round(current["total"] * 100, 2),
         "level": current["level"],
         "starts_at": current["startsAt"],
@@ -112,6 +112,14 @@ async def get_current_price(home_id: str | None = None) -> dict:
         ),
         "vs_day_average_pct": ctx["vs_day_average_pct"],
     }
+    # Nur melden, wenn wirklich etwas fehlt — bei vollständigen Daten kein Rauschen.
+    if ctx["hours_skipped"]:
+        result["data_note"] = (
+            f"{ctx['hours_skipped']} von {ctx['hours_received']} Preiseinträgen "
+            f"ohne Preis — Rang und Tagesdurchschnitt beziehen sich auf "
+            f"{ctx['hours_today']} Stunden, nicht auf den ganzen Tag."
+        )
+    return result
 
 
 async def get_price_forecast(home_id: str | None = None) -> dict:

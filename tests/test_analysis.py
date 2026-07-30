@@ -171,3 +171,30 @@ def test_build_report_negative_previous_cost():
     report = analysis.build_report(nodes, "month", 0, date(2026, 7, 5))
     # (1.0 - (-2.0)) / 2.0 * 100 = 150.0 → Kosten um 150% des Vorperioden-Betrags gestiegen
     assert report["change_vs_previous"]["cost_pct"] == 150.0
+
+
+def test_price_context_weist_verworfene_eintraege_aus():
+    """Preiseinträge ohne 'total' werden gefiltert — das Ergebnis muss die Lücke nennen.
+
+    Ohne diesen Ausweis wäre der Tagesdurchschnitt ein Mittelwert über eine
+    Teilmenge, ausgegeben als Tageswert (siehe docs/agent-review-contract.md, Regel 2).
+    """
+    today = _prices([0.20, 0.10, 0.30, 0.40])
+    today[3]["total"] = None  # Tibber liefert für diese Stunde keinen Preis
+    now = datetime(2026, 7, 5, 2, 30, tzinfo=TZ)
+
+    ctx = analysis.price_context(today, now)
+
+    assert ctx["hours_today"] == 3, "auswertbare Stunden"
+    assert ctx["hours_received"] == 4, "gelieferte Einträge"
+    assert ctx["hours_skipped"] == 1, "verworfene Einträge müssen sichtbar sein"
+
+
+def test_price_context_ohne_luecke_meldet_null_verworfene():
+    today = _prices([0.20, 0.10, 0.30, 0.40])
+    now = datetime(2026, 7, 5, 2, 30, tzinfo=TZ)
+
+    ctx = analysis.price_context(today, now)
+
+    assert ctx["hours_received"] == 4
+    assert ctx["hours_skipped"] == 0

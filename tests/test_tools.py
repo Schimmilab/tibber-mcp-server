@@ -125,6 +125,34 @@ async def test_get_price_forecast_tomorrow_missing(homes, price_info):
     assert result["today"]["max_ct_kwh"] == 43.0
 
 
+async def test_get_current_price_meldet_luecke_in_den_preisdaten(
+    homes, price_info, monkeypatch
+):
+    """Fehlen Stundenpreise, muss die Antwort das sagen — sonst liest sich der
+    Tagesdurchschnitt wie ein vollstaendiger Tageswert."""
+    info = dict(price_info)
+    today = [dict(p) for p in info["today"]]
+    for entry in today[:3]:
+        entry["total"] = None
+    info["today"] = today
+
+    async def fake_get_price_info(home_id):
+        return info
+
+    monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
+    result = await server.get_current_price()
+
+    assert "data_note" in result, "Luecke muss sichtbar sein"
+    assert "3 von 24" in result["data_note"]
+    assert "21 Stunden" in result["data_note"]
+
+
+async def test_get_current_price_ohne_luecke_bleibt_still(homes, price_info):
+    """Bei vollstaendigen Daten kein Hinweis — der Ausweis darf kein Rauschen erzeugen."""
+    result = await server.get_current_price()
+    assert "data_note" not in result
+
+
 async def test_get_current_price_without_current_entry(homes, price_info, monkeypatch):
     info = dict(price_info)
     info["current"] = None

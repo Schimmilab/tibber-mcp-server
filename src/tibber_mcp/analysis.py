@@ -10,8 +10,15 @@ def price_context(today: list[dict], now: datetime) -> dict:
     """Ordnet den aktuellen Preis in den Tagesverlauf ein.
 
     today: Preiseinträge {"startsAt", "total", "level"} für den heutigen Tag.
+
+    Einträge ohne "total" sind nicht auswertbar und werden aussortiert. Wie viele
+    das waren, steht im Ergebnis (`hours_received` / `hours_skipped`) — ohne diese
+    Zahlen wäre `vs_day_average_pct` ein Mittelwert über eine Teilmenge, ausgegeben
+    als Tageswert. Siehe docs/agent-review-contract.md, Regel 2.
     """
+    received = len(today)
     today = [p for p in today if p.get("total") is not None]
+    skipped = received - len(today)
     current = None
     for entry in today:
         starts = _parse(entry["startsAt"])
@@ -30,6 +37,8 @@ def price_context(today: list[dict], now: datetime) -> dict:
         # Preis-Gleichstände bekommen denselben (niedrigsten) Rang.
         "rank_today": totals.index(current["total"]) + 1,
         "hours_today": len(totals),
+        "hours_received": received,
+        "hours_skipped": skipped,
         "vs_day_average_pct": vs_avg_pct,
     }
 

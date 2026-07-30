@@ -40,7 +40,7 @@ Prüfregeln für automatisierte Code-Reviews in diesem Repository — für Copil
 
 **Der Kern in einem Satz: Ein Filter, der still verwirft, erzeugt keine Lücke, sondern eine falsche Zahl.**
 
-**⚠️ Offener Verstoß im Bestand — `analysis.py`, `price_context()`:**
+**✅ Behoben am 2026-07-30 — der Fall bleibt als Beleg stehen. Ursprünglicher Verstoß in `analysis.py`, `price_context()`:**
 
 ```python
 today = [p for p in today if p.get("total") is not None]
@@ -48,7 +48,9 @@ today = [p for p in today if p.get("total") is not None]
 avg = sum(totals) / len(totals)
 ```
 
-Preiseinträge ohne `total` fliegen still raus, **und der Tagesdurchschnitt wird anschließend über die Restmenge gebildet.** Liefert die Tibber-API für einige Stunden kein `total`, meldet die Funktion einen Durchschnitt über eine Teilmenge — als wäre es der Tagesdurchschnitt. Exakt die Fehlerklasse oben, nur mit Strompreisen statt Blutdruckwerten. **Behebung wäre die Zahl daneben:** wie viele der erwarteten 24 Einträge tatsächlich eingeflossen sind.
+Preiseinträge ohne `total` flogen still raus, **und der Tagesdurchschnitt wurde anschließend über die Restmenge gebildet.** Liefert die Tibber-API für einige Stunden kein `total`, meldete die Funktion einen Durchschnitt über eine Teilmenge — als wäre es der Tagesdurchschnitt. Exakt die Fehlerklasse oben, nur mit Strompreisen statt Blutdruckwerten.
+
+**Der Fix ist die Zahl daneben, nicht ein anderer Filter.** `price_context()` gibt jetzt zusätzlich `hours_received` und `hours_skipped` aus; `get_current_price` hängt bei einer Lücke eine `data_note` an („3 von 24 Preiseinträgen ohne Preis — Rang und Tagesdurchschnitt beziehen sich auf 21 Stunden, nicht auf den ganzen Tag"). **Bei vollständigen Daten bleibt die Antwort unverändert still** — ein Abdeckungsausweis, der immer redet, wird genauso ignoriert wie gar keiner. Vier Tests decken beide Richtungen ab.
 
 **Kein Treffer, wenn:** das Verwerfen der Zweck der Funktion ist und der Umfang aus dem Rückgabewert hervorgeht.
 
