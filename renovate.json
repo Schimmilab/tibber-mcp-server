@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Berlin",
+  "schedule": ["* 2-6 * * 1"],
+  "dependencyDashboard": true,
+  "labels": ["dependencies"],
+
+  "rangeStrategy": "pin",
+  "minimumReleaseAge": null,
+
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 2-6 1 * *"]
+  },
+
+  "packageRules": [
+    {
+      "description": "Patch-Updates automatisch mergen, sobald die CI gruen ist. Ohne das entsteht bei mehreren Repos eine PR-Flut, die nach drei Wochen niemand mehr liest.",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+    {
+      "description": "Das MCP-SDK niemals automatisch mergen. Genau dieser Sprung ist der Grund fuer den Drift-Radar - er gehoert angesehen, nicht durchgewunken.",
+      "matchPackageNames": ["mcp", "fastmcp", "@modelcontextprotocol/sdk"],
+      "automerge": false,
+      "addLabels": ["mcp-sdk"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Major-Updates immer einzeln und nie gruppiert - bei einem Bruch soll erkennbar sein, welches Paket ihn ausgeloest hat.",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "groupName": null
+    }
+  ]
+}
