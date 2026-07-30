@@ -27,7 +27,11 @@ Prüfregeln für automatisierte Code-Reviews in diesem Repository — für Copil
 | Test-Fixtures mit echten API-Antworten (enthalten `address1`, `appNickname`) | 🔴 **Fund** — Fixtures aus dem Live-Account sind eine typische Leckstelle |
 | Platzhalter `<dein-token>`, `Bearer …` | ✅ kein Fund |
 
-**Kein Treffer, wenn:** der Wert erkennbar ein Platzhalter ist. **Und ausdrücklich kein Fund:** dass die Tool-*Antwort* zur Laufzeit eine Adresse enthalten kann (`home.address.address1` kommt aus Schimmis eigenem Tibber-Account) — das ist ein Datenfluss zum lokal laufenden Modell, kein Repo-Inhalt. Regel 1 prüft, was **im Repo landet**, nicht was der Server ausgibt.
+**Ebenfalls kein Fund: das öffentliche Pseudonym.** „Schimmi" / „Schimmilab" ist die Marke, unter der diese Repos ohnehin erscheinen — ein bereits öffentlicher Personenbezug wird durch Nennung nicht privater. **Ein Fund ist der Klarname**, nicht das Pseudonym. **Und ebenfalls kein Fund: die Git-Autor-Zeile** (`Author: … <…@…>`) — die steckt in jedem Commit jedes öffentlichen Repos und ist konfigurierte Identität, nicht Dateiinhalt. Regel 1 meint den **Text im Diff**, nicht die Commit-Metadaten.
+
+> 🔎 **Diese Abgrenzung entstand aus einem Selbsttreffer im Schwesterprojekt:** dort stand in der Beispieltabelle zu dieser Regel eine **echte Hausanschrift** als Negativbeispiel — der Beleg für die Regel war selbst der Verstoß. Vor dem ersten Push korrigiert. **Lehre: ein Beispiel für „so sieht ein Leck aus" darf nie das echte Datum verwenden.**
+
+**Kein Treffer, wenn:** der Wert erkennbar ein Platzhalter ist. **Und ausdrücklich kein Fund:** dass die Tool-*Antwort* zur Laufzeit eine Adresse enthalten kann (`home.address.address1` kommt aus dem Tibber-Konto des Betreibers) — das ist ein Datenfluss zum lokal laufenden Modell, kein Repo-Inhalt. Regel 1 prüft, was **im Repo landet**, nicht was der Server ausgibt.
 
 ## 2 — Kein Filter, der still verwirft
 

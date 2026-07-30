@@ -298,7 +298,7 @@ async def test_get_consumption_rejects_huge_last(homes, consumption):
 
 
 async def test_get_consumption_report_month(homes, monkeypatch):
-    from datetime import date, timedelta as td
+    from datetime import timedelta as td
 
     today = datetime.now(server.LOCAL_TZ).date()
     cur_month_start = today.replace(day=1)

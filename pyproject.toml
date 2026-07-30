@@ -1,6 +1,6 @@
 [project]
 name = "tibber-mcp-server"
-version = "0.1.0"
+version = "0.2.0"
 description = "MCP-Server für die Tibber-API: Preise, Verbrauch, Pulse-Live-Daten"
 license = { text = "MIT" }
 authors = [{ name = "Jürgen Schilling" }]
