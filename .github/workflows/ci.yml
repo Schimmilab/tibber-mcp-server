@@ -15,3 +15,15 @@ jobs:
           python-version: "3.12"
       - run: uv sync
       - run: uv run pytest
+
+      # Smoke-Test: startet den Server wirklich und spricht das MCP-Protokoll
+      # (initialize -> tools/list). pytest beantwortet nicht, ob der Server
+      # nach einer Frischinstallation ueberhaupt laeuft; ein Import-Test auch
+      # nicht, weil Tools in Dekoratoren registriert werden.
+      # Anlass: 30.07.2026 sechs Server aufs neue SDK umgestellt und gemerged,
+      # am 31.07. waren fuenf tot - die CI hatte nichts gemerkt.
+      - name: MCP-Smoke
+        uses: Schimmilab/mcp-smoke-action@v1
+        with:
+          command: uv run tibber-mcp
+          min-tools: "7"
