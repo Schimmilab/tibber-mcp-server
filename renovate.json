@@ -1,62 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "local>Schimmilab/renovate-runner"
   ],
-  "timezone": "Europe/Berlin",
-  "schedule": [
-    "at any time"
-  ],
-  "dependencyDashboard": true,
-  "labels": [
-    "dependencies"
-  ],
-  "rangeStrategy": "pin",
-  "minimumReleaseAge": null,
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": [
-      "* 2-6 1 * *"
-    ]
-  },
-  "packageRules": [
-    {
-      "description": "Patch-Updates automatisch mergen, sobald die CI gruen ist. Ohne das entsteht bei mehreren Repos eine PR-Flut, die nach drei Wochen niemand mehr liest.",
-      "matchUpdateTypes": [
-        "patch"
-      ],
-      "automerge": true,
-      "platformAutomerge": true
-    },
-    {
-      "description": "Das MCP-SDK niemals automatisch mergen. Genau dieser Sprung ist der Grund fuer den Drift-Radar - er gehoert angesehen, nicht durchgewunken.",
-      "matchPackageNames": [
-        "mcp",
-        "fastmcp",
-        "@modelcontextprotocol/sdk"
-      ],
-      "automerge": false,
-      "addLabels": [
-        "mcp-sdk"
-      ],
-      "minimumReleaseAge": "3 days"
-    },
-    {
-      "description": "Major-Updates immer einzeln und nie gruppiert - bei einem Bruch soll erkennbar sein, welches Paket ihn ausgeloest hat.",
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "automerge": false,
-      "groupName": null
-    },
-    {
-      "description": "Reifezeit gilt echten Updates, nicht dem Pin. Ein Pin schreibt die Version fest, die ohnehin schon aufgeloest ist und laeuft - da gibt es nichts abzuwarten. Ohne diese Ausnahme haengt jeder Pin-PR an renovate/stability-days, obwohl die Zielversion Wochen alt ist (belegt 2026-07-31: fastmcp 3.4.2 vom 06.06. blockiert).",
-      "matchUpdateTypes": [
-        "pin",
-        "pinDigest"
-      ],
-      "minimumReleaseAge": null
-    }
-  ],
-  "description": "PILOTPHASE bis ca. 13.08.2026: laeuft ohne Zeitfenster, damit das Verhalten sofort beobachtbar ist. Danach zurueck auf den Montagslauf \"* 2-6 * * 1\", sonst tropfen PRs ueber die ganze Woche ein."
+  "description": "Alles Gemeinsame liegt im Preset default.json des renovate-runner - Zeitzone, Zeitplan, Pin-Strategie, Labels und die vier packageRules (Patch-Automerge, SDK-Sonderbehandlung, Major einzeln, Reifezeit-Ausnahme fuer Pins). Repo-spezifisches gehoert HIER hin und ueberschreibt das Preset, weil spaeter aufgeloest."
 }
