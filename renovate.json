@@ -48,6 +48,14 @@
       ],
       "automerge": false,
       "groupName": null
+    },
+    {
+      "description": "Reifezeit gilt echten Updates, nicht dem Pin. Ein Pin schreibt die Version fest, die ohnehin schon aufgeloest ist und laeuft - da gibt es nichts abzuwarten. Ohne diese Ausnahme haengt jeder Pin-PR an renovate/stability-days, obwohl die Zielversion Wochen alt ist (belegt 2026-07-31: fastmcp 3.4.2 vom 06.06. blockiert).",
+      "matchUpdateTypes": [
+        "pin",
+        "pinDigest"
+      ],
+      "minimumReleaseAge": null
     }
   ],
   "description": "PILOTPHASE bis ca. 13.08.2026: laeuft ohne Zeitfenster, damit das Verhalten sofort beobachtbar ist. Danach zurueck auf den Montagslauf \"* 2-6 * * 1\", sonst tropfen PRs ueber die ganze Woche ein."
