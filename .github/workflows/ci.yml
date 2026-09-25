@@ -13,7 +13,7 @@ jobs:
       - uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: "3.12"
-      - run: uv sync
+      - run: uv sync --locked   # inkonsistentes uv.lock = rot, nicht still neu aufloesen
       - run: uv run pytest
 
       # Smoke-Test: startet den Server wirklich und spricht das MCP-Protokoll
