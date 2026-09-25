@@ -1521,16 +1521,17 @@ wheels = [
 
 [[package]]
 name = "pytibber"
-version = "0.37.6"
+version = "0.38.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "gql" },
+    { name = "tenacity" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8b/55/b6d20af540f5aa162da00d4a826a9802678d42121b3b6c6cd9da056654b7/pytibber-0.37.6.tar.gz", hash = "sha256:c270cb56dca1ce4ed6d3ee7f2c3b500412f7c47f32df4d9fce0e1c9041ca71b1", size = 37458, upload-time = "2026-05-14T09:43:52.26Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/6b/8bc2488649c9abab580caa37fee7254ce38a48c58510aeb6d4ab323bae2b/pytibber-0.38.0.tar.gz", hash = "sha256:79739b9889a99fec064223cca2b15147ff2e3a860c20ac77d18e18fe08ce6484", size = 43926, upload-time = "2026-08-10T03:25:17.024Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/ad/c4ecf26473f403e0c2df7252cea27fbdd36c3b67d8ed1c0b3c6ed7241d32/pytibber-0.37.6-py3-none-any.whl", hash = "sha256:ff9a59e682f00c796c049eac6ef4dccd4eb114dd781840e974b3bbaf099817c4", size = 34781, upload-time = "2026-05-14T09:43:50.931Z" },
+    { url = "https://files.pythonhosted.org/packages/af/56/d509ab62807b128cd4a93d527d36e60945a9cae6e05201d6197925f26365/pytibber-0.38.0-py3-none-any.whl", hash = "sha256:16941eb09ed9ebf3f18ff282e08b8b04f78d280b5fbe7841744278275874a3b9", size = 35324, upload-time = "2026-08-10T03:25:16.043Z" },
 ]
 
 [[package]]
@@ -1834,8 +1835,17 @@ wheels = [
 ]
 
 [[package]]
+name = "tenacity"
+version = "9.1.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55", size = 28926, upload-time = "2026-02-07T10:45:32.24Z" },
+]
+
+[[package]]
 name = "tibber-mcp-server"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -1856,7 +1866,7 @@ requires-dist = [
     { name = "aiohttp", specifier = "==3.14.3" },
     { name = "fastmcp", specifier = "==4.0.5" },
     { name = "httpx", specifier = "==0.28.1" },
-    { name = "pytibber", specifier = "==0.37.6" },
+    { name = "pytibber", specifier = "==0.38.0" },
 ]
 
 [package.metadata.requires-dev]

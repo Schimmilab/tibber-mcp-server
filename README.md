@@ -47,9 +47,11 @@ claude mcp add tibber --scope user -- uv run --env-file /pfad/zu/tibber-mcp-serv
 | Tool | Zweck |
 |------|-------|
 | `get_home_info` | Homes, Adresse, Zählpunkt, Pulse vorhanden? |
-| `get_current_price` | Preis jetzt + Einordnung (Rang, % vs. Tagesschnitt) |
-| `get_price_forecast` | Stundenpreise heute/morgen mit Min/Max/Schnitt |
-| `find_cheapest_hours` | Günstigste Stunden für Waschmaschine, E-Auto & Co. |
+| `get_current_price` | Preis jetzt + Einordnung (Rang, % vs. Tagesschnitt); `resolution=QUARTER_HOURLY` für die laufende Viertelstunde |
+| `get_price_forecast` | Preise heute/morgen mit Min/Max/Schnitt — 24 Stunden- oder 96 Viertelstundenwerte pro Tag |
+| `find_cheapest_hours` | Günstigstes Fenster für Waschmaschine, E-Auto & Co.; Laufzeit in Stunden mit Bruchteilen, im Viertelstundenraster auf 15 min genau |
+
+**Raster:** Alle drei Preis-Tools nehmen `resolution` = `HOURLY` (Standard) oder `QUARTER_HOURLY`. Seit der Umstellung auf 15-Minuten-Preise ist das Viertelstundenraster der tatsächlich abgerechnete Preis; das Stundenraster ist der Mittelwert daraus.
 | `get_consumption` | Verbrauch pro Stunde/Tag/Woche/Monat (max. 744 Perioden) |
 | `get_consumption_report` | Aggregierter Report mit Vorperioden-Vergleich |
 | `get_live_measurement` | Pulse-Live-Snapshot (aktuelle Leistung, Tageswerte; wartet bis zu 15 s) |

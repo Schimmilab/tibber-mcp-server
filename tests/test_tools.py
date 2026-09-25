@@ -101,7 +101,7 @@ def price_info(monkeypatch):
     now_hour = datetime.now(server.LOCAL_TZ).hour
     info["current"] = today[now_hour]
 
-    async def fake_get_price_info(home_id):
+    async def fake_get_price_info(home_id, resolution="HOURLY"):
         return info
 
     monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
@@ -136,7 +136,7 @@ async def test_get_current_price_meldet_luecke_in_den_preisdaten(
         entry["total"] = None
     info["today"] = today
 
-    async def fake_get_price_info(home_id):
+    async def fake_get_price_info(home_id, resolution="HOURLY"):
         return info
 
     monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
@@ -157,7 +157,7 @@ async def test_get_current_price_without_current_entry(homes, price_info, monkey
     info = dict(price_info)
     info["current"] = None
 
-    async def fake_get_price_info(home_id):
+    async def fake_get_price_info(home_id, resolution="HOURLY"):
         return info
 
     monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
@@ -171,7 +171,7 @@ async def test_get_price_forecast_ignores_null_totals(homes, price_info, monkeyp
         {"startsAt": "2099-01-01T00:00:00.000+01:00", "total": None, "level": None}
     ]
 
-    async def fake_get_price_info(home_id):
+    async def fake_get_price_info(home_id, resolution="HOURLY"):
         return info
 
     monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
@@ -186,7 +186,7 @@ async def test_get_price_forecast_with_tomorrow(homes, price_info, monkeypatch):
         {"startsAt": "2026-07-06T01:00:00.000+02:00", "total": 0.25, "level": "NORMAL"},
     ]
 
-    async def fake_get_price_info(home_id):
+    async def fake_get_price_info(home_id, resolution="HOURLY"):
         return info
 
     monkeypatch.setattr(server.graphql, "get_price_info", fake_get_price_info)
