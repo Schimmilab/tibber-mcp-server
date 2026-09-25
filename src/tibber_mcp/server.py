@@ -1,4 +1,5 @@
 """Tibber MCP Server — Tool-Schicht. Kein Business-Code, nur Orchestrierung + Formatierung."""
+import math
 import os
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -89,18 +90,36 @@ def _day_summary(entries: list[dict]) -> dict | None:
     }
 
 
-async def get_current_price(home_id: str | None = None) -> dict:
+_SLOT_NAME = {"HOURLY": "Stunden", "QUARTER_HOURLY": "Viertelstunden"}
+
+
+def _slot_minutes(resolution: str) -> int:
+    if resolution not in graphql.PRICE_RESOLUTIONS:
+        raise TibberApiError("resolution muss HOURLY oder QUARTER_HOURLY sein.")
+    return graphql.PRICE_RESOLUTIONS[resolution]
+
+
+async def get_current_price(
+    resolution: str = "HOURLY", home_id: str | None = None
+) -> dict:
     """Aktueller Strompreis mit Einordnung: Tibber-Level, Rang im Tagesverlauf
-    und prozentuale Abweichung vom Tagesdurchschnitt."""
+    und prozentuale Abweichung vom Tagesdurchschnitt.
+
+    resolution: 'HOURLY' (Stundenpreis) oder 'QUARTER_HOURLY' (Preis der laufenden
+    Viertelstunde — seit der 15-Minuten-Abrechnung der tatsächlich gültige Preis).
+    """
+    slot_min = _slot_minutes(resolution)
     hid = await resolve_home_id(home_id)
-    info = await graphql.get_price_info(hid)
+    info = await graphql.get_price_info(hid, resolution)
     current = info.get("current")
     if current is None:
         raise TibberApiError(
             "Kein aktueller Preis in der Tibber-Antwort — später erneut versuchen."
         )
     try:
-        ctx = analysis.price_context(info["today"], datetime.now(LOCAL_TZ))
+        ctx = analysis.price_context(
+            info["today"], datetime.now(LOCAL_TZ), slot=timedelta(minutes=slot_min)
+        )
     except ValueError as exc:
         raise TibberApiError(str(exc)) from exc
     result = {
@@ -108,8 +127,9 @@ async def get_current_price(home_id: str | None = None) -> dict:
         "level": current["level"],
         "starts_at": current["startsAt"],
         "rank_today": (
-            f"{ctx['rank_today']}. günstigste von {ctx['hours_today']} Stunden"
+            f"{ctx['rank_today']}. günstigste von {ctx['hours_today']} {_SLOT_NAME[resolution]}"
         ),
+        "resolution": resolution,
         "vs_day_average_pct": ctx["vs_day_average_pct"],
     }
     # Nur melden, wenn wirklich etwas fehlt — bei vollständigen Daten kein Rauschen.
@@ -117,17 +137,25 @@ async def get_current_price(home_id: str | None = None) -> dict:
         result["data_note"] = (
             f"{ctx['hours_skipped']} von {ctx['hours_received']} Preiseinträgen "
             f"ohne Preis — Rang und Tagesdurchschnitt beziehen sich auf "
-            f"{ctx['hours_today']} Stunden, nicht auf den ganzen Tag."
+            f"{ctx['hours_today']} {_SLOT_NAME[resolution]}, nicht auf den ganzen Tag."
         )
     return result
 
 
-async def get_price_forecast(home_id: str | None = None) -> dict:
-    """Stundenpreise für heute und (falls schon publiziert) morgen, jeweils mit
-    Min/Max/Durchschnitt und günstigster/teuerster Stunde."""
+async def get_price_forecast(
+    resolution: str = "HOURLY", home_id: str | None = None
+) -> dict:
+    """Preise für heute und (falls schon publiziert) morgen, jeweils mit
+    Min/Max/Durchschnitt und günstigstem/teuerstem Intervall.
+
+    resolution: 'HOURLY' (24 Werte/Tag) oder 'QUARTER_HOURLY' (96 Werte/Tag).
+    Die Felder heißen in beiden Rastern gleich ('hours', 'cheapest_hour') —
+    im Viertelstundenraster meinen sie die Viertelstunde.
+    """
+    _slot_minutes(resolution)
     hid = await resolve_home_id(home_id)
-    info = await graphql.get_price_info(hid)
-    result: dict = {"today": _day_summary(info["today"])}
+    info = await graphql.get_price_info(hid, resolution)
+    result: dict = {"resolution": resolution, "today": _day_summary(info["today"])}
     if result["today"] is None:
         result["today_note"] = "Keine Preisdaten für heute in der Tibber-Antwort."
     tomorrow = _day_summary(info.get("tomorrow") or [])
@@ -140,22 +168,28 @@ async def get_price_forecast(home_id: str | None = None) -> dict:
 
 
 async def find_cheapest_hours(
-    duration_hours: int,
+    duration_hours: float,
     window: str = "next_24h",
     contiguous: bool = True,
+    resolution: str = "HOURLY",
     home_id: str | None = None,
 ) -> dict:
     """Findet die günstigsten Stunden für einen Verbraucher (Waschmaschine,
     Spülmaschine, E-Auto-Ladung).
 
-    duration_hours: Laufzeit des Verbrauchers in Stunden.
+    duration_hours: Laufzeit des Verbrauchers in Stunden, Bruchteile erlaubt
+        (1.5 = 90 min). Wird auf ganze Rasterintervalle aufgerundet.
+    resolution: 'HOURLY' oder 'QUARTER_HOURLY' — im Viertelstundenraster findet
+        es kurze Preissenken und plant Laufzeiten auf 15 min genau.
     window: 'today', 'tomorrow' oder 'next_24h'.
     contiguous: True = zusammenhängender Block, False = billigste Einzelstunden.
-    next_24h schließt die laufende Stunde ein — start_hours[0] kann in der
+    next_24h schließt das laufende Intervall ein — start_hours[0] kann in der
     Vergangenheit liegen (sofort starten).
     """
+    slot_min = _slot_minutes(resolution)
+    slots = math.ceil(round(duration_hours * 60 / slot_min, 6))
     hid = await resolve_home_id(home_id)
-    info = await graphql.get_price_info(hid)
+    info = await graphql.get_price_info(hid, resolution)
     now = datetime.now(LOCAL_TZ)
     if window == "today":
         candidates = info["today"]
@@ -170,21 +204,23 @@ async def find_cheapest_hours(
         candidates = [
             e
             for e in all_entries
-            if datetime.fromisoformat(e["startsAt"]) + timedelta(hours=1) > now
-        ][:24]
+            if datetime.fromisoformat(e["startsAt"]) + timedelta(minutes=slot_min) > now
+        ][: 24 * 60 // slot_min]
     else:
         raise TibberApiError("window muss 'today', 'tomorrow' oder 'next_24h' sein.")
     # Annahme: null-totals nur als trailing unpublizierte Stunden, nie mittendrin
     # (sonst Lücke im Sliding-Window).
     candidates = [e for e in candidates if e.get("total") is not None]
     try:
-        result = analysis.find_cheapest_window(candidates, duration_hours, contiguous)
+        result = analysis.find_cheapest_window(candidates, slots, contiguous)
     except ValueError as exc:
         raise TibberApiError(str(exc)) from exc
     return {
         "window": window,
         "duration_hours": duration_hours,
         "contiguous": contiguous,
+        "resolution": resolution,
+        "slot_minutes": slot_min,
         "start_hours": result["hours"],
         "average_price_ct_kwh": round(result["average_price_eur_kwh"] * 100, 2),
         "savings_vs_window_average_pct": result["savings_vs_window_average_pct"],
