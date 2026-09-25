@@ -6,10 +6,13 @@ def _parse(ts: str) -> datetime:
     return datetime.fromisoformat(ts)
 
 
-def price_context(today: list[dict], now: datetime) -> dict:
+def price_context(
+    today: list[dict], now: datetime, slot: timedelta = timedelta(hours=1)
+) -> dict:
     """Ordnet den aktuellen Preis in den Tagesverlauf ein.
 
     today: Preiseinträge {"startsAt", "total", "level"} für den heutigen Tag.
+    slot: Länge eines Preiseintrags (1 h, im Viertelstundenraster 15 min).
 
     Einträge ohne "total" sind nicht auswertbar und werden aussortiert. Wie viele
     das waren, steht im Ergebnis (`hours_received` / `hours_skipped`) — ohne diese
@@ -22,11 +25,11 @@ def price_context(today: list[dict], now: datetime) -> dict:
     current = None
     for entry in today:
         starts = _parse(entry["startsAt"])
-        if starts <= now < starts + timedelta(hours=1):
+        if starts <= now < starts + slot:
             current = entry
             break
     if current is None:
-        raise ValueError("Kein Preiseintrag für die aktuelle Stunde gefunden.")
+        raise ValueError("Kein Preiseintrag für den aktuellen Zeitpunkt gefunden.")
     totals = sorted(p["total"] for p in today)
     avg = sum(totals) / len(totals)
     if avg == 0:
@@ -56,7 +59,8 @@ def find_cheapest_window(
         raise ValueError("duration_hours muss mindestens 1 sein.")
     if duration_hours > len(prices):
         raise ValueError(
-            f"duration_hours={duration_hours} ist länger als das Fenster ({len(prices)} Stunden)."
+            f"Laufzeit von {duration_hours} Preisintervallen ist länger als das Fenster "
+            f"({len(prices)} Preisintervalle)."
         )
     window_avg = sum(p["total"] for p in prices) / len(prices)
     if contiguous:

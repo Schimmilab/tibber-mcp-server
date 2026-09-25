@@ -6,7 +6,7 @@ import os
 
 import httpx
 
-from tibber_mcp.cache import TTLCache, seconds_until_next_hour
+from tibber_mcp.cache import TTLCache, seconds_until_next_hour, seconds_until_next_quarter
 
 API_URL = "https://api.tibber.com/v1-beta/gql"
 
@@ -75,11 +75,11 @@ HOMES_QUERY = """
 """
 
 PRICE_QUERY = """
-query ($homeId: ID!) {
+query ($homeId: ID!, $resolution: PriceInfoResolution) {
   viewer {
     home(id: $homeId) {
       currentSubscription {
-        priceInfo {
+        priceInfo(resolution: $resolution) {
           current { total startsAt level }
           today { total startsAt level }
           tomorrow { total startsAt level }
@@ -114,20 +114,27 @@ async def get_homes() -> list[dict]:
     return homes
 
 
-async def get_price_info(home_id: str) -> dict:
-    """priceInfo (current/today/tomorrow), gecacht bis zur nächsten vollen Stunde."""
-    key = f"price:{home_id}"
+PRICE_RESOLUTIONS = {"HOURLY": 60, "QUARTER_HOURLY": 15}
+
+
+async def get_price_info(home_id: str, resolution: str = "HOURLY") -> dict:
+    """priceInfo (current/today/tomorrow) im Stunden- oder Viertelstundenraster,
+    gecacht bis zum nächsten Rasterwechsel."""
+    if resolution not in PRICE_RESOLUTIONS:
+        raise TibberApiError("resolution muss HOURLY oder QUARTER_HOURLY sein.")
+    key = f"price:{home_id}:{resolution}"
     cached = _cache.get(key)
     if cached is not None:
         return cached
-    data = await query(PRICE_QUERY, {"homeId": home_id})
+    data = await query(PRICE_QUERY, {"homeId": home_id, "resolution": resolution})
     home = data["viewer"]["home"]
     if home is None or home.get("currentSubscription") is None:
         raise TibberApiError(
             "Kein aktiver Tibber-Vertrag für dieses Home gefunden — keine Preisdaten verfügbar."
         )
     info = home["currentSubscription"]["priceInfo"]
-    _cache.set(key, info, ttl_seconds=seconds_until_next_hour())
+    ttl = seconds_until_next_quarter() if resolution == "QUARTER_HOURLY" else seconds_until_next_hour()
+    _cache.set(key, info, ttl_seconds=ttl)
     return info
 
 

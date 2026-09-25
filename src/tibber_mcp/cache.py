@@ -29,3 +29,10 @@ def seconds_until_next_hour(now: datetime | None = None) -> float:
     now = now or datetime.now(LOCAL_TZ)
     next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
     return (next_hour - now).total_seconds()
+
+
+def seconds_until_next_quarter(now: datetime | None = None) -> float:
+    """TTL für Viertelstundenpreise: gültig bis zur nächsten vollen Viertelstunde."""
+    now = now or datetime.now(LOCAL_TZ)
+    start = now.replace(minute=now.minute - now.minute % 15, second=0, microsecond=0)
+    return (start + timedelta(minutes=15) - now).total_seconds()
