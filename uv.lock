@@ -1563,7 +1563,7 @@ wheels = [
 
 [[package]]
 name = "pytibber"
-version = "0.38.0"
+version = "0.39.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1571,9 +1571,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/78/6b/8bc2488649c9abab580caa37fee7254ce38a48c58510aeb6d4ab323bae2b/pytibber-0.38.0.tar.gz", hash = "sha256:79739b9889a99fec064223cca2b15147ff2e3a860c20ac77d18e18fe08ce6484", size = 43926, upload-time = "2026-08-10T03:25:17.024Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6e/19/5a7b1a3746ced57220ea5ab5b44e6e0cbfda29cd4b46687345e88be3f7a1/pytibber-0.39.0.tar.gz", hash = "sha256:3d780bc5d487ca1e5b80e835a2db1350b60e4dfe9a7325f3f4e5ed399a8eabf5", size = 52838, upload-time = "2026-10-15T04:57:05.963Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/af/56/d509ab62807b128cd4a93d527d36e60945a9cae6e05201d6197925f26365/pytibber-0.38.0-py3-none-any.whl", hash = "sha256:16941eb09ed9ebf3f18ff282e08b8b04f78d280b5fbe7841744278275874a3b9", size = 35324, upload-time = "2026-08-10T03:25:16.043Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/7b/ce478129ac82a379879e47e2ea2f5ecb2a1179102ae4071a6fb108333211/pytibber-0.39.0-py3-none-any.whl", hash = "sha256:87e054ab9af629b4fb015060f7935fbe828ec96db5c43b7e494adc82546f053b", size = 38864, upload-time = "2026-10-15T04:57:04.531Z" },
 ]
 
 [[package]]
@@ -1908,7 +1908,7 @@ requires-dist = [
     { name = "aiohttp", specifier = "==3.14.5" },
     { name = "fastmcp", specifier = "==4.0.5" },
     { name = "httpx", specifier = "==0.28.1" },
-    { name = "pytibber", specifier = "==0.38.0" },
+    { name = "pytibber", specifier = "==0.39.0" },
 ]
 
 [package.metadata.requires-dev]
